@@ -42,18 +42,18 @@
 #define EXTRUDER_NUM 1 // set in 1~6
 #define FAN_NUM 1      // set in 1~6
 
-//                       PLA      PETG       ABS     TPU
-#define PREHEAT_BED  \
-  {                  \
-    60, 85, 100, 235 \
+//                       PLA      PETG       ABS
+#define PREHEAT_BED \
+  {                 \
+    60, 85, 100     \
   }
 #define PREHEAT_HOTEND \
   {                    \
     215, 240, 240      \
   }
-#define PREHEAT_TEXT            \
-  {                             \
-    "PLA", "PETG", "ABS", "TPU" \
+#define PREHEAT_TEXT     \
+  {                      \
+    "PLA", "PETG", "ABS" \
   }
 
 #define HEAT_MAX_TEMP                 \
