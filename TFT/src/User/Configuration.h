@@ -16,10 +16,10 @@
 // Marlin Mode Background & Font Color Options
 // Current color options from lcd.h: BLACK, BLUE, BROWN, BRRED, CYAN, GBLUE, GRAY, GREEN, MAGENTA, RED, WHITE, YELLOW
 #define ST7920_BKCOLOR BLACK
-#define ST7920_FNCOLOR WHITE
+#define ST7920_FNCOLOR GBLUE
 
 // Text displayed at the top of the LCD in Marlin Mode.
-//#define ST7920_BANNER_TEXT "LCD12864 Simulator"
+#define ST7920_BANNER_TEXT "EinsyBear"
 
 // Run Marlin Mode fullscreen. Not recommended for TFT24.
 //#define ST7920_FULLSCREEN
@@ -230,10 +230,10 @@
 #define CUSTOM_2_GCODE "M21\n"
 #define CUSTOM_3_LABEL "Release Sd Card"
 #define CUSTOM_3_GCODE "M22\n"
-//#define CUSTOM_4_LABEL "Custom4"
-//#define CUSTOM_4_GCODE "M105\n"
-//#define CUSTOM_5_LABEL "Custom5"
-//#define CUSTOM_5_GCODE "M105\n"
+//#define CUSTOM_4_LABEL "PID E0"
+//#define CUSTOM_4_GCODE "M106 S102\nM303 E0 C10 S240 U\n"
+//#define CUSTOM_5_LABEL "PID Bed"
+//#define CUSTOM_5_GCODE "M105\nM303 E-1 C10 S75 U\n"
 //#define CUSTOM_6_LABEL "Custom6"
 //#define CUSTOM_6_GCODE "M105\n"
 
