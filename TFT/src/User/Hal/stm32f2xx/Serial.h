@@ -1,7 +1,6 @@
 #ifndef _SERIAL_H_
 #define _SERIAL_H_
 
-#include "parseACK.h"
 #include "usart.h"
 
 typedef struct
@@ -20,24 +19,4 @@ void Serial_Init(u32 baud);
 void Serial_DeInit(void);
 void Serial_Puts(uint8_t port, char *s);
 
-#endif 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#endif

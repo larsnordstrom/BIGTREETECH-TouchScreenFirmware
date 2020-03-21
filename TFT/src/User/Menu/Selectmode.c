@@ -24,32 +24,32 @@ void show_selectICON(void)
     return ;
 }
 
-bool LCD_ReadPen(uint8_t intervals)
+bool LCD_ReadPen(uint16_t intervals)
 {
   static u32 TouchTime = 0;
-  
+
   if(!XPT2046_Read_Pen())
   {
-    if(OS_GetTime() - TouchTime > intervals)
+    if(OS_GetTimeMs() - TouchTime > intervals)
     {
       return true;
     }
   }
   else
   {
-    TouchTime = OS_GetTime();
+    TouchTime = OS_GetTimeMs();
   }
   return false;
 }
 
-bool LCD_BtnTouch(uint8_t intervals)
+bool LCD_BtnTouch(uint16_t intervals)
 {
 	static u32 BtnTime = 0;
   u16 tx,ty;
   if(!XPT2046_Read_Pen())
   {
 		TS_Get_Coordinates(&tx,&ty);
-    if(OS_GetTime() - BtnTime > intervals)
+    if(OS_GetTimeMs() - BtnTime > intervals)
     {
 			if(tx>LCD_WIDTH-LCD_WIDTH/5 && ty<LCD_HEIGHT/5)
       return true;
@@ -57,7 +57,7 @@ bool LCD_BtnTouch(uint8_t intervals)
   }
   else
   {
-    BtnTime = OS_GetTime();
+    BtnTime = OS_GetTimeMs();
   }
   return false;
 }
@@ -69,15 +69,15 @@ bool LCD_BtnTouch(uint8_t intervals)
   static u32 CTime = 0;
   static u16 sy;
 	static bool MOVE = false;
-	
-	if(!XPT2046_Read_Pen() && CTime < OS_GetTime())
+
+	if(!XPT2046_Read_Pen() && CTime < OS_GetTimeMs())
   {
 		TS_Get_Coordinates(&ex,&ey);
 		if(!MOVE)
 		sy = ey;
-			
+
 		MOVE = true;
-			
+
 		if((sy>ey) && ey!=0)
 		{
             if(sy-ey > LCD_HEIGHT/9 && sy-ey < LCD_HEIGHT/7)//7-5
@@ -88,7 +88,7 @@ bool LCD_BtnTouch(uint8_t intervals)
 			}
             return 0;
 		}
-    else 
+    else
 		{
             if(ey-sy > LCD_HEIGHT/9 && ey-sy < LCD_HEIGHT/7)
 			{
@@ -100,11 +100,11 @@ bool LCD_BtnTouch(uint8_t intervals)
 	}
 	else
 	{
-		CTime = OS_GetTime();
+		CTime = OS_GetTimeMs();
 		sy = ey =0;
 		MOVE = false;
     return 0;
-	}	
+	}
 }
 #endif
 
@@ -158,13 +158,13 @@ void Touch_Sw(uint8_t num)
 			GPIO_SetLevel(LCD_ENCB_PIN, 1);
 			break;
 	}
-  
+
   LCD_EncoderInit();
 }
 
 MKEY_VALUES MKeyGetValue(void)
-{    
-  return (MKEY_VALUES)KEY_GetValue(sizeof(rect_of_mode)/sizeof(rect_of_mode[0]), rect_of_mode);    
+{
+  return (MKEY_VALUES)KEY_GetValue(sizeof(rect_of_mode)/sizeof(rect_of_mode[0]), rect_of_mode);
 }
 
 void selectmode(int8_t  nowMode)
