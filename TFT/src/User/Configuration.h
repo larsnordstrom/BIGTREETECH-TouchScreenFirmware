@@ -1,14 +1,15 @@
 #ifndef _CONFIGURATION_H_
 #define _CONFIGURATION_H_
-#define CONFIG_VERSION 20200810
+#define CONFIG_VERSION 20201218
 //===========================================================================
 //============================= General Settings ============================
 //===========================================================================
 
 /**
  * To work with RepRapFirmware, Add M575 P1 S2 B115200 to the end of config.g file in sd card
+ * uncomment for RepRapFirmware
 */
-#define RepRapFirmware
+//#define RepRapFirmware
 
 /**
  * Default Mode
@@ -16,10 +17,10 @@
  * Mode switching is still possible by holding down the encorder for two seconds.
  *
  * Options:
- * ST7920_SPI // Marlin Mode
- * SERIAL_TSC // Touch Mode
+ * MODE_MARLIN // Marlin Mode
+ * MODE_SERIAL_TSC // Touch Mode
  */
-#define DEFAULT_LCD_MODE SERIAL_TSC
+#define DEFAULT_LCD_MODE MODE_SERIAL_TSC
 
 /**
  * Default Startup Knob LED Color (TFT35 E3)
@@ -108,9 +109,9 @@
  * you commonly experience drop-outs during host printing.
  * You may try up to 1000000 to speed up SD file transfer.
  *
- * :[2400, 9600, 19200, 38400, 57600, 115200, 250000, 500000, 1000000]
+ * :[2400: 0, 9600: 1, 19200: 2, 38400: 3, 57600: 4, 115200: 5, 250000: 6, 500000: 7, 1000000: 8]
  */
-#define BAUDRATE 115200
+#define BAUDRATE 5
 
 /**
  * Default Primary Language (for Touch-Mode only)
@@ -258,15 +259,6 @@
  * Adds a submenu to the movement menu for selecting load and unload actions
  */
 #define LOAD_UNLOAD_M701_M702
-
-/**
- * Enable print summary popup
- * This will enable a popup at print end.
- * The popup shows the approximate print time and approximate filament used.
- * Displayed values are calculated by approximation and may differ from the actual values.
- * When enabled also the menu jumps to the status screen after the popup.
- */
-#define DISPLAY_PRINT_SUMMARY 1 // 0: Disabled 1: Enabled
 
 /**
  * Auto save/load Bed Leveling data
@@ -462,7 +454,7 @@
 #define POWER_LOSS_ZRAISE 10
 
 // Prevent extrusion if the temperature is below set temperature
-#define PREVENT_COLD_EXTRUSION_MINTEMP 170
+#define PREVENT_COLD_EXTRUSION_MINTEMP 180
 
 /**
  * Maximum hotend temperature of automatic shut down after printing.
@@ -536,6 +528,6 @@
 #define PRINT_END_GCODE "G90\nG1 E-4\nG92 E0\nM18\n" // Switch to absolute positioning, reduce filament pressure by performing small retract, reset extruder position, disable steppers
 
 // Cancel G-code - run this G-code after canceling print
-#define PRINT_CANCEL_GCODE "G28 XY R10\n" // Home XY and raise Z 10mm
+#define PRINT_CANCEL_GCODE "M104 S0\nM140 S0\nG28 XY R10\nM107\nM18\n" // Home XY and raise Z 10mm
 
 #endif

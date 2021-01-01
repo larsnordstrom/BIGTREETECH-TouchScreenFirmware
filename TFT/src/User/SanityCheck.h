@@ -6,12 +6,16 @@
 #include "flashStore.h"
 #include "Settings.h"
 
-//
+
 //check size of settings against max allocated size at compile time
 #define SIZE_CHECK(object) ((void)sizeof(char[1 - 2*!!(object)]))
 
 #if CONFIG_VERSION != CONFIG_SUPPPORT
     #error "the Configuration.h is old. please use the latest Configuration.h file"
+#endif
+
+#if BAUDRATE < 0 || BAUDRATE >= BAUDRATE_COUNT
+    #error "invalid Baudrate index. Pleas select a value only from options provided in configuration.h"
 #endif
 
 #ifdef ST7920_SPI
@@ -23,7 +27,7 @@
       #ifdef DEFAULT_LCD_MODE
         #undef DEFAULT_LCD_MODE
       #endif
-      #define DEFAULT_LCD_MODE SERIAL_TSC  // Just set hardcoded here. 
+      #define DEFAULT_LCD_MODE MODE_SERIAL_TSC  // Just set hardcoded here.
       //#warning "DEFAULT_LCD_MODE supports only SERIAL_TSC. Please update/check your configuration."
     #endif
 #endif
