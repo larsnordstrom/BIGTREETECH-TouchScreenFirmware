@@ -78,9 +78,9 @@ void menuLoadUnload(void)
           strcat(tempMsg, "\n");
           sprintf(tempStr, (char *)textSelect(LABEL_HEAT_HOTEND), infoSettings.min_ext_temp);
           strcat(tempMsg, tempStr);
+
           setDialogText(LABEL_WARNING, (uint8_t *)tempMsg, LABEL_CONFIRM, LABEL_CANCEL);
           showDialog(DIALOG_TYPE_ERROR, setHotendMinExtTemp, NULL, NULL);
-          // popupReminder(DIALOG_TYPE_ERROR, LABEL_COLD_EXT, (u8 *)tempMsg);
         }
         else if (key_num == KEY_ICON_0)
         { // unload
@@ -103,7 +103,7 @@ void menuLoadUnload(void)
       case KEY_ICON_5:
         infoMenu.menu[++infoMenu.cur] = menuHeat;
         lastcmd = NONE;
-      break;
+        break;
 
       case KEY_ICON_6:
         heatCoolDown();
@@ -111,18 +111,21 @@ void menuLoadUnload(void)
         break;
 
       case KEY_ICON_7:
-        for (uint8_t i = 0; i < infoSettings.hotend_count; i++)
+        if (!isPrinting())
         {
-          if (heatGetTargetTemp(i) > 0)
+          for (uint8_t i = 0; i < infoSettings.hotend_count; i++)
           {
-            setDialogText(LABEL_WARNING, LABEL_HEATERS_ON, LABEL_CONFIRM, LABEL_CANCEL);
-            showDialog(DIALOG_TYPE_QUESTION, heatCoolDown, NULL, NULL);
-            break;
+            if (heatGetTargetTemp(i) > 0)
+            {
+              setDialogText(LABEL_WARNING, LABEL_HEATERS_ON, LABEL_CONFIRM, LABEL_CANCEL);
+              showDialog(DIALOG_TYPE_QUESTION, heatCoolDown, NULL, NULL);
+              break;
+            }
           }
         }
         infoMenu.cur--;
         lastcmd = NONE;
-      break;
+        break;
 
       default:
         extruderIdReDraw();
