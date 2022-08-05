@@ -3,26 +3,33 @@
 
 void menuMain(void)
 {
-  // 1 title, ITEM_PER_PAGE items(icon+label)
+  // 1 title, ITEM_PER_PAGE items (icon + label)
   MENUITEMS mainPageItems = {
     // title
     LABEL_MAINMENU,
-    // icon                         label
-    {{ICON_HEAT_FAN,                LABEL_UNIFIEDHEAT},
-     {ICON_HOME_MOVE,               LABEL_UNIFIEDMOVE},
-    #ifdef LOAD_UNLOAD_M701_M702
-      {ICON_EXTRUDE,                 LABEL_LOAD_UNLOAD_SHORT},
-    #else
-      {ICON_EXTRUDE,                 LABEL_EXTRUDE},
-    #endif
-     {ICON_STOP,                    LABEL_EMERGENCYSTOP},
-     {ICON_GCODE,                   LABEL_TERMINAL},
-     {ICON_CUSTOM,                  LABEL_CUSTOM},
-     {ICON_SETTINGS,                LABEL_SETTINGS},
-     {ICON_BACK,                    LABEL_BACK},}
+    // icon                          label
+    {
+      {ICON_HEAT_FAN,                LABEL_UNIFIEDHEAT},
+      {ICON_HOME_MOVE,               LABEL_UNIFIEDMOVE},
+      #ifdef LOAD_UNLOAD_M701_M702
+        {ICON_EXTRUDE,                 LABEL_LOAD_UNLOAD_SHORT},
+      #else
+        {ICON_EXTRUDE,                 LABEL_EXTRUDE},
+      #endif
+      {ICON_STOP,                    LABEL_EMERGENCYSTOP},
+      {ICON_GCODE,                   LABEL_TERMINAL},
+      {ICON_CUSTOM,                  LABEL_CUSTOM},
+      {ICON_SETTINGS,                LABEL_SETTINGS},
+      {ICON_BACK,                    LABEL_BACK},
+    }
   };
 
   KEY_VALUES key_num = KEY_IDLE;
+
+  if (infoMachineSettings.firmwareType == FW_REPRAPFW)
+  {
+    mainPageItems.items[5].label.index = LABEL_MACROS;
+  }
 
   if (infoSettings.status_screen != 1)
   {
@@ -32,24 +39,24 @@ void menuMain(void)
 
   menuDrawPage(&mainPageItems);
 
-  while (infoMenu.menu[infoMenu.cur] == menuMain)
+  while (MENU_IS(menuMain))
   {
     key_num = menuKeyGetValue();
     switch (key_num)
     {
       case KEY_ICON_0:
-        infoMenu.menu[++infoMenu.cur] = menuUnifiedHeat;
+        OPEN_MENU(menuUnifiedHeat);
         break;
 
       case KEY_ICON_1:
-        infoMenu.menu[++infoMenu.cur] = menuUnifiedMove;
+        OPEN_MENU(menuUnifiedMove);
         break;
 
       case KEY_ICON_2:
         #ifdef LOAD_UNLOAD_M701_M702
-          infoMenu.menu[++infoMenu.cur] = menuLoadUnload;
+          OPEN_MENU(menuLoadUnload);
         #else
-          infoMenu.menu[++infoMenu.cur] = menuExtrude;
+          OPEN_MENU(menuExtrude);
         #endif
         break;
 
@@ -61,22 +68,30 @@ void menuMain(void)
         break;
 
       case KEY_ICON_4:
-        infoMenu.menu[++infoMenu.cur] = menuSendGcode;
+        OPEN_MENU(menuTerminal);
         break;
 
       case KEY_ICON_5:
-        infoMenu.menu[++infoMenu.cur] = menuCustom;
+        if (infoMachineSettings.firmwareType == FW_REPRAPFW)
+        {
+          strcpy(infoFile.path, "Macros");
+          OPEN_MENU(menuCallMacro);
+        }
+        else
+        {
+          OPEN_MENU(menuCustom);
+        }
         break;
 
       case KEY_ICON_6:
-        infoMenu.menu[++infoMenu.cur] = menuSettings;
+        OPEN_MENU(menuSettings);
         break;
 
       case KEY_ICON_7:
         if (infoSettings.status_screen != 1)
-          infoMenu.menu[++infoMenu.cur] = menuPrint;
+          OPEN_MENU(menuPrint);
         else
-          infoMenu.cur--;
+          CLOSE_MENU();
         break;
 
       default:
@@ -86,4 +101,3 @@ void menuMain(void)
     loopProcess();
   }
 }
-

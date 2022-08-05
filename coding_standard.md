@@ -1,3 +1,5 @@
+# Pull request Standards
+* We recommend creating separate PRs for unrelated fixes, do not gather them in one single PR. By doing so it will make it easier for our team to focus on eventual issues and to review them.
 
 # Coding Standards
 
@@ -140,14 +142,14 @@ bool updateIcon(void)
   char nowBmp[64];
 
   GUI_Clear(infoSettings.bg_color);
-  GUI_DispString(5, PADDING, (u8 *)"Updating Icons");
+  GUI_DispString(5, PADDING, (uint8_t *)"Updating Icons");
   GUI_ClearPrect(&iconUpdateRect);
 
   for (int i = 0; i < COUNT(iconBmpName); i++)
   {
     sprintf(nowBmp, BMP_ROOT_DIR "/%s.bmp", iconBmpName[i]);
     GUI_ClearPrect(&labelUpdateRect);
-    GUI_DispString(labelUpdateRect.x0, labelUpdateRect.y0, (u8 *)nowBmp);
+    GUI_DispString(labelUpdateRect.x0, labelUpdateRect.y0, (uint8_t *)nowBmp);
     processIcon(nowBmp, ICON_ADDR(i));
   }
 
