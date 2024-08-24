@@ -73,6 +73,7 @@ void menuBedLevelingLayer2(void)
   while (MENU_IS(menuBedLevelingLayer2))
   {
     key_num = menuKeyGetValue();
+
     switch (key_num)
     {
       case KEY_ICON_0:
@@ -81,8 +82,7 @@ void menuBedLevelingLayer2(void)
           #if DELTA_PROBE_TYPE != 2  // if not removable probe
             ablStart();
           #else  // if removable probe
-            setDialogText(LABEL_WARNING, LABEL_CONNECT_PROBE, LABEL_CONTINUE, LABEL_CANCEL);
-            showDialog(DIALOG_TYPE_ALERT, ablStart, NULL, NULL);
+            popupDialog(DIALOG_TYPE_ALERT, LABEL_WARNING, LABEL_CONNECT_PROBE, LABEL_CONTINUE, LABEL_CANCEL, ablStart, NULL, NULL);
           #endif
         }
         else  // if MBL

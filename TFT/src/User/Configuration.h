@@ -1,7 +1,7 @@
 #ifndef _CONFIGURATION_H_
 #define _CONFIGURATION_H_
 
-#define CONFIG_VERSION 20220518
+#define CONFIG_VERSION 20240203
 
 //====================================================================================================
 //=============================== Settings Configurable On config.ini ================================
@@ -30,16 +30,93 @@
  *                P2: WIFI    (e.g. ESP3D)
  *                P3: UART 3  (e.g. OctoPrint)
  *                P4: UART 4
- *   Value range: P1: [min: 1, max: 9]
- *                P2: [min: 0, max: 9]
- *                P3: [min: 0, max: 9]
- *                P4: [min: 0, max: 9]
- *   Options: [OFF (port disabled): 0, 2400: 1, 9600: 2, 19200: 3, 38400: 4, 57600: 5, 115200: 6, 250000: 7, 500000: 8, 1000000: 9]
+ *   Value range: P1: [min: 1, max: 11]
+ *                P2: [min: 0, max: 11]
+ *                P3: [min: 0, max: 11]
+ *                P4: [min: 0, max: 11]
+ *   Options: [OFF (port disabled): 0, 2400: 1, 9600: 2, 19200: 3, 38400: 4, 57600: 5, 115200: 6, 230400: 7, 250000: 8, 500000: 9, 921600: 10, 1000000: 11]
  */
 #define SP_1 6  // Default: 6
 #define SP_2 0  // Default: 0
 #define SP_3 0  // Default: 0
 #define SP_4 0  // Default: 0
+
+/**
+ * TX Slots
+ * Used/effective only in case "ADVANCED_OK" is also enabled.
+ * Maximum number of G-code TX slots used by the TFT for the communication with the printer.
+ *
+ * NOTES:
+ *   - It requires "ADVANCED_OK" to be enabled.
+ *   - This setting allows a sort of static "ADVANCED_OK" feature implementation on TFT side just in
+ *     case "ADVANCED_OK" feature is disabled in Marlin firmware. You have to set it according to the
+ *     following key requirements:
+ *     - a value not bigger than "BUFSIZE" configured in Configuration_adv.h in Marlin firmware.
+ *     - "RX_BUFFER_SIZE" properly configured in Configuration_adv.h in Marlin firmware.
+ *       To be safe you need (MAX_CMD_SIZE * BUFSIZE) RX buffer. By default this is 96 * 4 bytes so
+ *       you would need to at least set RX_BUFFER_SIZE to 512 bytes, practically half of that will
+ *       be enough, but more is better/safer.
+ *   - Typically, a value of 2 is enough to keep the printer busy most of the time while preventing
+ *     buffer overruns on RX buffer. Thus, 2 is the suggested value in case users want to use the
+ *     static ADVANCED_OK feature allowed by this setting.
+ *
+ *   Value range: [min: 2, max: 16]
+ */
+#define TX_SLOTS 2  // Default: 1
+
+/**
+ * Advanced OK
+ * If enabled:
+ * - if "ADVANCED_OK" feature is enabled in Configuration_adv.h in Marlin firmware, the TFT will use
+ *   the available G-code TX slots indication provided by the mainboard to schedule the transmission
+ *   of multiple G-codes, if any, for a maximum of the given indication.
+ * - if "ADVANCED_OK" feature is disabled in Configuration_adv.h in Marlin firmware, the TFT will
+ *   support the transmission of G-codes according to the configured "TX_SLOTS" setting.
+ * If disabled, the TFT will provide the standard transmission logic based on one G-code per time.
+ *
+ * NOTE: Disable it in case:
+ *       - no ADVANCED_OK feature is requested/needed by the user.
+ *       - ADVANCED_OK feature is not providing good printing results or if the mainboard notifies
+ *         frequent error ACK messages (e.g. unknown command) to the TFT during printing.
+ *       - COMMAND_CHECKSUM feature (see description of next setting "COMMAND_CHECKSUM") is
+ *         requested/needed by the user.
+ *
+ *   Options: [disable: 0, enable: 1]
+ */
+#define ADVANCED_OK 0  // Default: 0
+
+/**
+ * Command Checksum
+ * The TFT enriches each G-code to be sent to the mainboard adding a leading sequential line number
+ * and a trailing checksum appended after an "*" character used as separator.
+ * The checksum is based on algorithm "CheckSum8 Xor" and it is calculated on the G-code with the
+ * applied line number. E.g. "G28" is firstly enriched with a line number (e.g. "N1 G28") and finally
+ * a checksum calculated on that enriched G-code is appended (e.g. "N1 G28*18").
+ * A data integrity check (sequential line number check and checksum check) will be performed on the
+ * mainboard. In case of data mismatch (e.g. data corruption due to EMI on communication serial line):
+ * - the mainboard will send to the TFT an error ACK message followed by a "Resend: " ACK message to
+ *   ask TFT to resend the G-code with the requested line number.
+ * - the TFT will check the presence on an internal buffer of the G-code with the requested line number:
+ *   - if found, the G-code is resent for a maximum of 3 attempts.
+ *   - if not found or the maximum number of attempts has been reached, the TFT will reset the line
+ *     number with an "M110" G-code (immediately sent bypassing any other enqueued G-code) to the
+ *     requested line number just to try to avoid further retransmission requests for the same line
+ *     number or for any out of synch command already sent to the mainboard (e.g. in case ADVANCED_OK
+ *     feature is enabled in TFT).
+ *
+ * NOTE: Disable it in case:
+ *       - printing is controlled by a remote host (e.g. ESP3D, OctoPrint etc.) and a COMMAND_CHECKSUM
+ *         feature is enabled and managed by the remote host. Otherwise (COMMAND_CHECKSUM feature also
+ *         enabled in TFT), the TFT's COMMAND_CHECKSUM feature will always replace the one provided by
+ *         the remote host causing conflicts in case data mismatch will be notified by the mainboard.
+ *       - ADVANCED_OK feature is enabled in TFT. Otherwise, any out of synch command already sent to
+ *         the mainboard will be discarded by the mainboard and not resent by the TFT due the current
+ *         implementation of COMMAND_CHECKSUM feature on the TFT buffers only the last sent command
+ *         and not all the pending commands.
+ *
+ *   Options: [disable: 0, enable: 1]
+ */
+#define COMMAND_CHECKSUM 0  // Default: 0
 
 /**
  * Emulated M600
@@ -82,7 +159,7 @@
  * The TFT parses and processes extra information provided by the slicer as comments in the G-code file.
  * If enabled, the current implementation parses and processes print time and print layer information
  * from the G-code file (nothing else).
- * If disabled, the "layer_disp_type" setting provided in "UI Settings" section becomes redundant.
+ * If disabled, the "LAYER_DISP_TYPE" setting provided in "UI Settings" section becomes redundant.
  *
  * NOTE: Enable it in case the slicer (e.g. Cura) supports extra information.
  *
@@ -170,7 +247,7 @@
  *   Options: [OFF: 0, POPUP: 1, TOAST: 2]
  *     OFF:   No notification. The message is ignored.
  *     POPUP: Display a popup window for user confirmation.
- *     TOAST: A non-blocking Toast notification is displayed for few seconds. No user interaction is needed.
+ *     TOAST: A non-blocking toast notification is displayed for few seconds. No user interaction is needed.
  */
 #define ACK_NOTIFICATION 1  // Default: 1
 
@@ -236,34 +313,35 @@
 
 /**
  * Progress Source
- * This sets the source of the progress calculation, G-code file advance based or time based.
- * In file mode it is a simple file progress, it tells you the percentage of the G-codes
- * executed. It doesn't reflect the amount of work done, only in a very few cases (ex. a 2D
- * shape expanded vertically like a cylinder, cube, etc).
- * Time based mode is very close to the real amount of work done, but it is still not perfect,
- * it relies on the estimate the slicer has done. It needs info from the slicer, the elapsed
- * time or the remaining time, if it's missing, the progress source defaults to file progress
- * mode. If no "M73 R" is present in the G-code file than it requires "file_comment_parsing"
- * to be enabled.
+ * This sets the source of the progress calculation, G-code file advance based mode or time based mode:
+ * - File mode is a simple file progress, it tells you the percentage of the G-codes executed.
+ *   It doesn't reflect the amount of work done, only in a very few cases (ex. a 2D shape expanded
+ *   vertically like a cylinder, cube etc.).
+ * - Time mode is very close to the real amount of work done, but it is still not perfect and it relies
+ *   on the estimate the slicer has done (see notes below).
  *
- * NOTE: If "M73 P" is present in the G-code file than file or time based progress will be
- *       overriden by that.
+ * NOTES:
+ *   - Time mode needs info from the G-code file such as the elapsed time or the remaining time. This info
+ *     can be supplied as "M73 Rxx" G-code or as comment. Both must be generated by the slicer. If comment
+ *     is used than "FILE_COMMENT_PARSING" has to be enabled for it to take effect.
+ *     If that info is missing (comment or "M73 Rxx"), the progress source defaults to option 0 (file mode).
+ *   - If "M73 Pxx" is present in the G-code file then file or time based progress modes will be overriden
+ *     by that.
  *
- *   Options: [File progress mode: 0, Time based progress: 1]
+ *   Options: [File mode: 0, Time mode: 1]
  */
 #define PROG_SOURCE 1
 
 /**
  * Progress Numeric Display Mode During Print
  * This sets the default display type for print progress numeric display. It can be changed during
- * print by pressing the hourglass icon.
- * At each click it will alter between the 3 variants.
+ * print by pressing the hourglass icon. At each click it will alter between the 3 variants.
  *
- * NOTE: Some slicers include time related info in the G-code files as comments. If the time info
- *       is not added by the slicer, then a post processing plugin is needed that adds that info in
- *       the G-code file (comment or M73 Rxx format).
- *       If no remaining time info is present in the G-code file (comment or M73 Rxx), the display
- *       defaults to option 0.
+ * NOTE: It needs info from the G-code file such as the elapsed time or the remaining time. This info can
+ *       be supplied as "M73 Rxx" G-code or as comment. Both must be generated by the slicer. If comment
+ *       is used than "FILE_COMMENT_PARSING" has to be enabled for it to take effect.
+ *       If that info is missing (comment or "M73 Rxx"), the display defaults to option 0 (percentage &
+ *       elapsed time).
  *
  *   Options: [Percentage & Elapsed time: 0, Percentage & Remaining time: 1, Elapsed time & Remaining time: 2]
  */
@@ -283,9 +361,8 @@
  *     Separators can be " ", ":", "_" or "=".
  *   - If the total number of layers exceeds 999, this information will not be displayed because
  *     there is not enough space for both current and total layer number to be shown.
- *
- *   - For PrusaSlicer, to enable this feature, following comment lines must be added in
- *     Printer Settings -> Custom G-code section:
+ *   - If PrusaSlicer is used, to enable the layer number display, the following comment lines must
+ *     be added in Printer Settings -> Custom G-code section:
  *     - In After layer change G-code section:
  *       ";LAYER:[layer_num]"
  *     - In Start G-code section:
@@ -348,7 +425,7 @@
  * Show banner text at the top of the TFT in Marlin Mode.
  *   Options: [disable: 0, enable: 1]
  */
-#define MARLIN_SHOW_TITLE 1  // Default: 1
+#define MARLIN_SHOW_TITLE 0  // Default: 0
 
 /**
  * Marlin Mode Title
@@ -376,19 +453,30 @@
 
 /**
  * Heated Bed Support
+ * Enable/disable presence of heated bed.
+ *
+ * NOTE: Disable it to let the TFT auto-detect if bed heating is enabled in Marlin firmware.
+ *
  *   Options: [disable: 0, enable: 1]
  */
 #define HEATED_BED 1  // Default: 1
 
 /**
  * Heated Chamber Support
- * The TFT will auto-detect if chamber heating is enabled in Marlin firmware.
+ * Enable/disable presence of heated chamber.
+ *
+ * NOTE: Disable it to let the TFT auto-detect if chamber heating is enabled in Marlin firmware.
+ *
  *   Options: [disable: 0, enable: 1]
  */
 #define HEATED_CHAMBER 0  // Default: 0
 
 /**
  * Extruder Count
+ * Set extruder count.
+ *
+ * NOTE: This value is overridden by the TFT if provided by Marlin firmware.
+ *
  *   Value range: [min: 0, max: 6]
  */
 #define EXTRUDER_COUNT  1  // Default: 1
@@ -490,13 +578,17 @@
 #define EXTRUDE_FAST_SPEED   1200  // Default: 1200
 
 /**
- * Auto Save/Load Bed Leveling Data
- * The TFT will auto-detect if Auto Bed Level is available.
- * Enable this will send "M500" after "G29" to store leveling value and send "M420 S1"
- * to enable leveling state after startup.
+ * Auto Load Bed Leveling Data
+ * If enabled, load bed leveling data and turn leveling on at startup sending gcode "M420 S1".
+ *
+ * NOTE: If enabled, it is required:
+ *       1) EEPROM and a bed leveling type (e.g. UBL) enabled in Marlin.
+ *       2) A valid mesh saved on EEPROM (it is required to enable bed leveling).
+ *          If the mesh is invalid / incomplete leveling will not be enabled.
+ *
  *   Options: [disable: 0, enable: 1]
  */
-#define AUTO_LOAD_LEVELING 1  // Default: 1
+#define AUTO_LOAD_LEVELING 0  // Default: 0
 
 /**
  * Onboard / Printer Media
@@ -507,8 +599,11 @@
 
 /**
  * Onboard / Printer Media Support
- * On Marlin firmware, the TFT will auto-detect onboard media.
- * Auto-detect is not available for other firmwares like Smoothieware.
+ * Enable/disable presence of onboard media.
+ *
+ * NOTE: Auto-detect option is currently available (supported) by Marlin firmware.
+ *       Auto-detect is not available for other firmwares like Smoothieware.
+ *
  *   Options: [disable: 0, enable: 1, auto-detect: 2]
  */
 #define ONBOARD_SD 2  // Default: 2
@@ -530,8 +625,11 @@
 
 /**
  * Long File Names Support
- * On Marlin firmware, the TFT will auto-detect Long File Name support.
- * Auto-detect is not available for other firmwares like Smoothieware.
+ * Enable/disable support to long file names.
+ *
+ * NOTE: Auto-detect option is currently available (supported) by Marlin firmware.
+ *       Auto-detect is not available for other firmwares like Smoothieware.
+ *
  *   Options: [disable: 0, enable: 1, auto-detect: 2]
  */
 #define LONG_FILENAME 2  // Default: 2
@@ -634,15 +732,15 @@
  * is moved to the XY probing point.
  * If disabled, after homing the nozzle is moved directly to the XY homing point. This is useful
  * in case Marlin firmware is configured to use the probe for Z axis homing (e.g.
- * USE_PROBE_FOR_Z_HOMING enabled in Marlin firmware) to avoid a second probing after homing.
+ * "USE_PROBE_FOR_Z_HOMING" enabled in Marlin firmware) to avoid a second probing after homing.
  *
  * NOTES:
  *   - Enable it in case Marlin firmware is not configured to use the probe for Z axis homing
- *     (e.g. USE_PROBE_FOR_Z_HOMING disabled in Marlin firmware) or the XY probing point set
+ *     (e.g. "USE_PROBE_FOR_Z_HOMING" disabled in Marlin firmware) or the XY probing point set
  *     for homing is not reachable by the nozzle (e.g. due to HW limitations/constraints or
  *     printer specific configuration).
  *   - Disable it (preferably) in case Marlin firmware is configured to use the probe for Z axis
- *     homing (e.g. USE_PROBE_FOR_Z_HOMING enabled in Marlin firmware).
+ *     homing (e.g. "USE_PROBE_FOR_Z_HOMING" enabled in Marlin firmware).
  *
  *   Options: [disable: 0, enable: 1]
  */
@@ -666,13 +764,13 @@
  * Z Steppers Auto-Alignment (ABL)
  * It allows to align multiple Z stepper motors using a bed probe by probing one position per stepper.
  * Enable this setting to show an icon in ABL menu allowing to run G34 command (it requires
- * Z_STEPPER_AUTO_ALIGN enabled in Configuration_adv.h in Marlin firmware).
+ * "Z_STEPPER_AUTO_ALIGN" enabled in Configuration_adv.h in Marlin firmware).
  *
  * NOTE: Only for Marlin printers with one stepper driver per Z stepper motor and no Z timing belt.
  *
  *   Options: [disable: 0, enable: 1]
  */
-#define Z_STEPPER_ALIGNEMENT 0  // Default: 0
+#define Z_STEPPERS_ALIGNMENT 0  // Default: 0
 
 /**
  * TouchMI Settings (ABL)
@@ -742,6 +840,10 @@
 /**
  * Filament Runout Sensor
  * Select the type of filament runout sensor and its default enabled/disabled state.
+ *
+ * NOTE: Smart Filament Sensor (SFS) (value 2 or 3) is a sensor based on an encoder disc that
+ *       toggles runout pin as filament moves (e.g. the BigTreeTech SFS).
+ *
  *   Options: [Normal Disabled: 0, Normal Enabled: 1, Smart Disabled: 2, Smart Enabled: 3]
  */
 #define FIL_RUNOUT 0  // Default: 0
@@ -774,6 +876,10 @@
  * Smart Filament Runout Detection
  * Used in conjunction with an SFS (Smart Filament Sensor) based on an encoder disc that
  * toggles runout pin as filament moves.
+ *
+ * NOTE: This setting is taken into account by the TFT only in case "FIL_RUNOUT" setting is
+ *       set to 2 or 3 (an SFS is used).
+ *
  *   Unit: [distance in mm]
  *   Value range: [min: 1, max: 50]
  */
@@ -790,8 +896,16 @@
 
 /**
  * Power Loss Recovery Mode
- * Enable power loss recovery.
- * Disable to reduce the loss of TFT SD card or TFT USB disk.
+ * Enable/disable power loss recovery mode.
+ * If enabled, a recovery file named "Printing.sys", created in the same media (e.g. TFT SD card) of the file
+ * that is being printed, containing the current print status is updated during the print and deleted on print
+ * completion. In case of a power failure, the recovery file is used to restore the print from the outage point.
+ * After a power failure, a popup message asking to restore the failed print is prompted when browsing the media
+ * containing the recovery file.
+ *
+ * NOTE: Disable it in case issues such as the loss of media (e.g. read error messages from TFT SD card) during
+ *       the print are experienced.
+ *
  *   Options: [disable: 0, enable: 1]
  */
 #define PL_RECOVERY 1  // Default: 1
@@ -828,7 +942,7 @@
  *
  * NOTE: Error messages from printer will always play the error sound.
  *
- * Parameters:
+ * Settings:
  *   touch_sound:  Enable/disable this to control touch feedback sound.
  *   toast_sound:  Enable/disable this to control all toast notification sounds.
  *   alert_sound:  Enable/disable this to control all popup and alert sounds
@@ -922,7 +1036,7 @@
 /**
  * Knob LED Pixels (only for TFT28/TFT35_E3/TFT43/TFT50/TFT70 V3.0)
  * Set the number of LEDs in the strip connected to "Neopixel" port of TFT.
- * It shares the same signal line as "knob_led". 0 means the default number in TFT hardware.
+ * It shares the same signal line as "KNOB_LED_COLOR". 0 means the default number in TFT hardware.
  * Greater than 0 means the number of LEDs in the strip.
  *   Value range: [min: 0, max: 200]
  */
@@ -1046,6 +1160,12 @@
  */
 
 /**
+ * Monitoring Debug
+ * Uncomment/Enable to monitor/show system resources usage in Monitoring menu.
+ */
+#define DEBUG_MONITORING  // Default: uncommented (enabled)
+
+/**
  * Generic Debug
  * Uncomment/Enable to enable arbitrary debug serial communication to SERIAL_DEBUG_PORT defined in board specific Pin_xx.h file.
  */
@@ -1102,15 +1222,18 @@
 #define SPEED_ID {"Sp.", "Fr."}  // (speed, flow rate)
 
 // Axes names displayed in Parameter Settings menu
-#define AXIS_DISPLAY_ID    {"X", "Y", "Z", "E0", "E1"}                                // (X, Y, Z, E0, E1)
-#define STEPPER_DISPLAY_ID {"X", "X2", "Y", "Y2", "Z", "Z2", "Z3", "Z4", "E0", "E1"}  // (X, X2, Y, Y2, Z, Z2, Z3, Z4, E0, E1)
+#define AXIS_DISPLAY_ID    {"X", "Y", "Z", "E0", "E1", "E2"}                                // (X, Y, Z, E0, E1)
+#define STEPPER_DISPLAY_ID {"X", "X2", "Y", "Y2", "Z", "Z2", "Z3", "Z4", "E0", "E1", "E2"}  // (X, X2, Y, Y2, Z, Z2, Z3, Z4, E0, E1, E2)
 
 // Manual Leveling
 // Move to four corner points to Leveling manually (Point 1, Point 2, Point 3, Point 4).
-#define LEVELING_EDGE_DISTANCE_DISPLAY_ID "X/Y"
-#define LEVELING_EDGE_DISTANCE_MIN           0                    // Default: 0
-#define LEVELING_EDGE_DISTANCE_MAX         100                    // Default: 100
-#define LEVELING_EDGE_DISTANCE_DEFAULT    LEVELING_EDGE_DISTANCE  // Default: LEVELING_EDGE_DISTANCE
+#define LEVELING_EDGE_DISTANCE_MIN       0                     // Default: 0
+#define LEVELING_EDGE_DISTANCE_MAX     100                     // Default: 100
+#define LEVELING_EDGE_DISTANCE_DEFAULT LEVELING_EDGE_DISTANCE  // Default: LEVELING_EDGE_DISTANCE
+
+#define LEVELING_Z_POS_MIN       0.0f          // Default: 0.0f
+#define LEVELING_Z_POS_MAX     100.0f          // Default: 100.0f
+#define LEVELING_Z_POS_DEFAULT LEVELING_Z_POS  // Default: LEVELING_Z_POS
 
 // Z Fade limits
 #define Z_FADE_MIN_VALUE      0.0f  // Default: 0.0f
@@ -1156,7 +1279,7 @@
 
 /**
  * MBL Settings
- * Apply the "level_z_pos" configurable parameter value as the
+ * Apply the "LEVELING_Z_POS" configurable parameter value as the
  * starting Z height for each point during MBL process.
  * If not enabled, you can set the desired starting Z height
  * in Marlin fw (MANUAL_PROBE_START_Z in Configuration.h).
@@ -1172,7 +1295,7 @@
 
 /**
  * M701, M702: Marlin Filament Load / Unload G-codes Support
- * FILAMENT_LOAD_UNLOAD_GCODES option on Marlin configuration_adv.h need to be uncommented.
+ * "FILAMENT_LOAD_UNLOAD_GCODES" option in Configuration_adv.h in Marlin fw needs to be uncommented.
  * Adds a submenu to the movement menu for selecting load and unload actions.
  */
 #define LOAD_UNLOAD_M701_M702  // Default: uncommented (enabled)
@@ -1200,7 +1323,7 @@
  *   Options: [ENGLISH,    CHINESE,  RUSSIAN,     JAPANESE,   ARMENIAN,  GERMAN,        CZECH,
  *             SPANISH,    FRENCH,   PORTUGUESE,  ITALIAN,    POLISH,    SLOVAK,        DUTCH,
  *             HUNGARIAN,  TURKISH,  GREEK,       SLOVENIAN,  CATALAN,   TRAD_CHINESE,  UKRAINIAN,
- *             BRAZIL]
+ *             BRAZIL,     CROATIAN]
  */
 #define SYSTEM_LANGUAGE ENGLISH  // Default: ENGLISH
 
@@ -1219,7 +1342,7 @@
  * In case LCD Encoder's sliding buttons (pin LCD_ENCA_PIN and LCD_ENCB_PIN) don't produce
  * any movement on menu, try to increase the delay (in MilliSeconds) (e.g. 64).
  */
-#ifdef MKS_TFT
+#if defined(MKS_TFT)
   #define LCD_ENC_DELAY           40  // in ms. Default: 8
   #define LCD_ENC_PULSES_PER_STEP  2  // Default: 4
   #define LCD_ENC_BUTTON_INTERVAL 20  // in ms. Default: 20
@@ -1239,7 +1362,7 @@
  *       M300 S<frequency Hz> P<duration MilliSeconds>
  */
 #define BUZZER_FREQUENCY_DURATION_MS    20  // in ms. Default: 20
-#define BUZZER_FREQUENCY_HZ          10000  // in Hz (20Hz to 60000Hz). Default: 10000
+#define BUZZER_FREQUENCY_HZ          10548  // in Hz (20Hz to 60000Hz). Default: 10548 (musical note "E")
 
 /**
  * Buzzer Stop Level
@@ -1334,6 +1457,13 @@
  *     azerty: The typically keyboard Layout for french.
  */
 #define TERMINAL_KEYBOARD_LAYOUT 0  // Default: 0
+
+/**
+ * Suppress/allow terminal cache during keyboard view
+ * Uncomment to disable terminal cache during keyboard view.
+ * Comment to enable terminal cache during keyboard view.
+ */
+#define TERMINAL_KEYBOARD_VIEW_SUPPRESS_ACK  // Default: uncommented (cache suppressed)
 
 /**
  * Progress Bar Color (Printing menu)
